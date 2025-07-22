@@ -11,6 +11,7 @@ const common_1 = require("@nestjs/common");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const user_module_1 = require("./user/user.module");
+const appointments_module_1 = require("./appointments/appointments.module");
 const config_1 = require("@nestjs/config");
 const typeorm_1 = require("@nestjs/typeorm");
 let AppModule = class AppModule {
@@ -26,7 +27,8 @@ exports.AppModule = AppModule = __decorate([
                 autoLoadEntities: true,
                 synchronize: true,
             }),
-            user_module_1.UserModule
+            user_module_1.UserModule,
+            appointments_module_1.AppointmentsModule
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],
