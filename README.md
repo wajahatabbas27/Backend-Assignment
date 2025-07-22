@@ -393,19 +393,19 @@ Below are screenshots demonstrating how to test the `/api/appointments/recommend
 ### 1. Postman Request Example
 This screenshot shows the request body and endpoint setup in Postman:
 
-![Postman request setup for /api/appointments/recommend](screenshots/Screenshot 2025-07-22 at 6.59.27 PM.png)
+![Postman request setup for /api/appointments/recommend](screenshots/Screenshot%202025-07-22%20at%206.59.27%20PM.png)
 
 ### 2. Postman Response Example (Part 1)
 This screenshot shows the first part of the successful response with recommended slots:
 
-![Postman response showing recommended slots (part 1)](screenshots/Screenshot 2025-07-22 at 6.59.51 PM.png)
+![Postman response showing recommended slots (part 1)](screenshots/Screenshot%202025-07-22%20at%206.59.51%20PM.png)
 
 ### 3. Postman Response Example (Part 2)
 This screenshot shows the second part of the response:
 
-![Postman response showing recommended slots (part 2)](screenshots/Screenshot 2025-07-22 at 7.00.26 PM.png)
+![Postman response showing recommended slots (part 2)](screenshots/Screenshot%202025-07-22%20at%207.00.26%20PM.png)
 
 ### 4. Postman Response Example (Part 3)
 This screenshot shows the final part of the response:
 
-![Postman response showing recommended slots (part 3)](screenshots/Screenshot 2025-07-22 at 7.00.45 PM.png)
+![Postman response showing recommended slots (part 3)](screenshots/Screenshot%202025-07-22%20at%207.00.45%20PM.png)
