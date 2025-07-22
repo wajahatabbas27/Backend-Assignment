@@ -385,3 +385,17 @@ For support and questions:
 ---
 
 **Built with ❤️ for efficient healthcare scheduling**
+
+## Sample Postman Request & Response
+
+Below are screenshots demonstrating how to test the `/api/appointments/recommend` endpoint using Postman.
+
+### 1. Postman Request Example
+This screenshot shows the request body and endpoint setup in Postman:
+
+![Postman request setup for /api/appointments/recommend](screenshots/postman-request.png)
+
+### 2. Postman Response Example
+This screenshot shows the successful response with recommended slots:
+
+![Postman response showing recommended slots](screenshots/postman-response.png)
