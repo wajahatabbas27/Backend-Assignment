@@ -19,48 +19,101 @@ This document describes the design and implementation of a healthcare appointmen
 
 ## Entity Relationship Diagram (ERD)
 
-```
-┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
-│     Clinic      │       │    Physician    │       │     Patient     │
-├─────────────────┤       ├─────────────────┤       ├─────────────────┤
-│ id (UUID) PK    │◄──────┤ id (UUID) PK    │       │ id (UUID) PK    │
-│ name            │       │ firstName       │       │ firstName       │
-│ address         │       │ lastName        │       │ lastName        │
-│ phone           │       │ email           │       │ email           │
-│ openTime        │       │ phone           │       │ phone           │
-│ closeTime       │       │ specialization  │       │ dateOfBirth     │
-│ operatingDays   │       │ licenseNumber   │       │ gender          │
-│ isActive        │       │ clinicId (FK)   │       │ address         │
-│ createdAt       │       │ isActive        │       │ insuranceInfo   │
-│ updatedAt       │       │ createdAt       │       │ medicalHistory  │
-└─────────────────┘       │ updatedAt       │       │ allergies       │
-                          └─────────────────┘       │ isActive        │
-                                    │               │ createdAt       │
-                                    │               │ updatedAt       │
-                                    │               └─────────────────┘
-                                    │                        │
-                          ┌─────────┴─────────┐             │
-                          │                   │             │
-                          ▼                   ▼             ▼
-                ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-                │AvailabilityBlock│ │   BillingRule   │ │   Appointment   │
-                ├─────────────────┤ ├─────────────────┤ ├─────────────────┤
-                │ id (UUID) PK    │ │ id (UUID) PK    │ │ id (UUID) PK    │
-                │ startTime       │ │ ruleType        │ │ startTime       │
-                │ endTime         │ │ name            │ │ endTime         │
-                │ status          │ │ description     │ │ durationMinutes │
-                │ recurrenceType  │ │ durationMinutes │ │ status          │
-                │ physicianId FK  │ │ applicableStart │ │ type            │
-                │ isActive        │ │ applicableEnd   │ │ notes           │
-                │ createdAt       │ │ applicableDays  │ │ reasonForVisit  │
-                │ updatedAt       │ │ priority        │ │ billingAmount   │
-                └─────────────────┘ │ physicianId FK  │ │ physicianId FK  │
-                                    │ isActive        │ │ patientId FK    │
-                                    │ createdAt       │ │ clinicId FK     │
-                                    │ updatedAt       │ │ createdAt       │
-                                    └─────────────────┘ │ updatedAt       │
-                                                        └─────────────────┘
-```
+![Entity Relationship Diagram](erd.png)
+
+*Figure: ERD showing the relationships between clinics, physicians, patients, appointments, availability blocks, and billing rules.*
+
+### ERD Explanation
+- **CLINICS**: Represents healthcare facilities. Each clinic can have multiple physicians and defines its own operating hours.
+- **PHYSICIANS**: Belongs to a clinic. Each physician has working hours (availability blocks), can have multiple appointments, and is subject to billing rules.
+- **PATIENTS**: Can book appointments with any physician. Stores patient details and contact information.
+- **APPOINTMENTS**: Links physicians, patients, and clinics. Stores appointment timing, type, status, and notes.
+- **AVAILABILITY_BLOCKS**: Defines when physicians are available or unavailable (e.g., working hours, breaks). Used to generate possible appointment slots.
+- **BILLING_RULES**: Defines rules such as minimum gaps, buffer times, lunch breaks, and billing blocks for each clinic/physician.
+
+Relationships:
+- A clinic **has** many physicians.
+- A physician **has** many availability blocks and appointments.
+- A patient **books** many appointments.
+- Appointments **link** clinics, physicians, and patients.
+- Billing rules are **defined** per clinic and **hosted** by physicians.
+
+---
+
+## Key APIs (Input/Output)
+
+### 1. Recommend Appointment Slots
+- **POST** `/api/appointments/recommend`
+- **Input:**
+  ```json
+  {
+    "clinicId": "<uuid>",
+    "physicianId": "<uuid>",
+    "patientId": "<uuid>",
+    "preferredDate": "YYYY-MM-DD",
+    "durationMinutes": 15
+  }
+  ```
+- **Output:**
+  ```json
+  {
+    "status": "success",
+    "recommendedSlots": [
+      {
+        "startTime": "2025-07-01T09:00:00.000Z",
+        "endTime": "2025-07-01T09:15:00.000Z",
+        "durationMinutes": 15,
+        "confidence": 100,
+        "conflicts": []
+      }
+      // ... up to 10 slots
+    ],
+    "totalSlotsFound": 10,
+    "searchCriteria": {
+      "clinicId": "...",
+      "physicianId": "...",
+      "patientId": "...",
+      "preferredDate": "...",
+      "durationMinutes": 15
+    }
+  }
+  ```
+
+---
+
+## Scheduling Algorithm Logic Flow
+
+1. **Validation**
+   - Check if physician, clinic, and patient exist and are active.
+   - Ensure physician belongs to the specified clinic.
+2. **Data Collection**
+   - Retrieve existing appointments for the physician on the preferred date.
+   - Get physician's availability blocks for that date.
+   - Fetch applicable billing rules.
+3. **Slot Generation**
+   - Generate all possible time slots within working/available periods (default 15-minute intervals).
+   - Use clinic hours if no availability blocks are defined.
+4. **Conflict Filtering**
+   - Remove slots that overlap with existing appointments.
+5. **Apply Billing Rules & Scoring**
+   - Apply rules for minimum gaps, buffer times, lunch breaks, and billing blocks.
+   - Score each slot based on rule compliance, proximity to other appointments, and time-of-day preferences.
+6. **Ranking & Output**
+   - Sort slots by confidence score (highest first).
+   - Return the top 10 recommended slots.
+
+---
+
+## Handling Gaps and Slot Recommendations
+
+- **Minimum Gaps**: Enforced between appointments as per billing rules (e.g., 10-15 minutes for cleaning/setup).
+- **Buffer Times**: Preferred (but not mandatory) gaps, with lower penalty if not met.
+- **Lunch Breaks & Billing Blocks**: Slots overlapping these periods are penalized or blocked.
+- **Clustering Avoidance**: Slots too close to other appointments are penalized to avoid back-to-back bookings.
+- **Least Disruptive Slots**: Morning slots and those with fewer conflicts are prioritized.
+- **Scoring**: Each slot receives a confidence score based on all the above factors, and only the best slots are recommended.
+
+---
 
 ## Database Schema Details
 
